@@ -1,0 +1,19 @@
+#control
+{
+  position:  absolute;
+  left:      0px;
+  top:    1000px;
+  padding:   5px;
+  min-width: 465px;
+
+  background-color: #eee;
+}
+
+#viewer_canvas
+{
+  position: absolute;
+  left:     0px;
+  top:      0px;
+
+  border:   none;
+}

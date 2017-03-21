@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+
+<head>
+
+<title>motion draw viewer</title>
+
+<meta charset = "utf-8">
+<meta name = "viewport" content = "width=device-width,initial-scale=1.0">
+
+<link rel = "stylesheet" type = "text/css" href = "css/motion_viewer.css">
+
+<script>var host = 'wss://79.207.124.205';</script>
+<script language = "javascript" type = "text/javascript" src = "js/gl_math.js"></script>
+<script language = "javascript" type = "text/javascript" src = "js/motion_draw.js"></script>
+
+<script id="viewer_vertex" type="x-shader/x-vertex">
+
+attribute vec3 pos;
+
+uniform mat4 pv;
+
+void main()
+{
+  gl_Position = pv * vec4(pos,1.0);
+}
+
+</script>
+
+<script id="viewer_fragment" type="x-shader/x-fragment">
+
+precision mediump float;
+
+void main()
+{
+  gl_FragColor = vec4(0.0);
+}
+
+</script>
+
+</head>
+
+
+<body>
+
+  <div id = "control">
+
+    <form>
+      x: <input id = "c_x" type = "text" readonly>
+      y: <input id = "c_y" type = "text" readonly>
+      acc: <input id = "c_acc" type = "text" readonly>
+    </form>
+
+  </div>
+
+<canvas id="viewer_canvas" width="1000px" height="1000px"></canvas>
+
+</body>
+
+
+</html>

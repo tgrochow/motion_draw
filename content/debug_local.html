@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+
+<head>
+
+<title>motion draw debug</title>
+
+<meta charset = "utf-8">
+<meta name = "viewport" content = "width=device-width,initial-scale=1.0">
+
+<link rel = "stylesheet" type = "text/css" href = "css/debug.css">
+
+<script language = "javascript" type = "text/javascript">var host = 'wss://localhost';</script>
+<script language = "javascript" type = "text/javascript" src = "js/debug.js"></script>
+
+</head>
+
+
+<body>
+
+<div id = "map"></div>
+
+<div id = "control">
+
+  <form>
+    x: <input id = "c_x" type = "text" readonly>
+    y: <input id = "c_y" type = "text" readonly>
+
+    <button id = "c_new_line" type = "button">new polyline</button>
+  </form>
+
+</div>
+
+<script language = "javascript" type = "text/javascript"
+        src      = "https://maps.googleapis.com/maps/api/js?key=AIzaSyDeBtpbpZYV2bE8rcxz1_YhA7jTUhotgNA&callback=init_map">
+</script>
+
+</body>
+
+
+</html>
