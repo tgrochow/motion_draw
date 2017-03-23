@@ -133,8 +133,7 @@ function Viewer()
 
   this.control        = {'x' : null, 'y' : null,'acc' : null};
   this.mouse_down     = false;
-  this.prev_touch_pos = null;
-  this.current_touch  = null;
+  this.prev_mouse_pos = null;
 }
 
 Viewer.prototype.init_websocket = function(host,port,protocol)
@@ -233,29 +232,30 @@ Viewer.prototype.init_gl_ctx = function(canvas_id)
 
      this.gl_ctx.viewport(0,0,this.canvas.width,this.canvas.height);
 
-     this.canvas.addEventListener("touchstart",function(event)
+     this.canvas.onmousedown = function(event)
      {
-       console.log('touchdown');
-       this.current_touch = event.changedTouches[0];
-       motion_draw_viewer.prev_touch_pos = [event.changedTouches[0].clientX,event.changedTouches[0].clientY];
-     });
-
-     this.canvas.addEventListener("touchend",function(event)
-     {
-       console.log('touchend');
-     });
-
-     this.canvas.addEventListener("touchmove",function(event)
-     {
-       var x = this.current_touch.clientX - motion_draw_viewer.prev_touch_pos[0];
-       var y = motion_draw_viewer.prev_touch_pos[1] - this.current_touch.clientY;
-       var t_mat = mat4.translation_matrix(x,y,0.0);
-       console.log('x:' + x + ' y ' + y);
-
-       motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
-
        motion_draw_viewer.prev_mouse_pos = [event.clientX,event.clientY];
-     });
+       motion_draw_viewer.mouse_down = true;
+     };
+
+     this.canvas.onmouseup = function(event)
+     {
+       motion_draw_viewer.mouse_down = false;
+     };
+
+     this.canvas.onmousemove = function(event)
+     {
+       if(motion_draw_viewer.mouse_down)
+       {
+         var x = event.clientX - motion_draw_viewer.prev_mouse_pos[0];
+         var y = motion_draw_viewer.prev_mouse_pos[1] - event.clientY;
+         var t_mat = mat4.translation_matrix(x,y,0.0);
+
+         motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
+
+         motion_draw_viewer.prev_mouse_pos = [event.clientX,event.clientY];
+       }
+     };
   }
 
   catch(exception)
