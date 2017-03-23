@@ -82,6 +82,11 @@ Server.prototype.init_web_server = function(ws_port,ws_protocol,content_path)
 
   this.application.use(this.express_module.static(content_path));
 
+  this.application.get('/',function(req,res)
+  {
+    res.sendFile(path.join(__dirname + '/index.html'));
+  });
+
   this.web_server = this.https_module.createServer(options,this.application);
 
   this.init_websocket_server();

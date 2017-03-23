@@ -144,7 +144,7 @@ Viewer.prototype.init_navigator = function()
   {
     enableHighAccuracy: true,
     timeout:            5000,
-    maximumAge:         0
+    maximumAge:         6000
   };
 
   navigator.geolocation.watchPosition(nav_watch_pos,nav_error,options);
@@ -208,6 +208,11 @@ Viewer.prototype.init_gl_ctx = function(canvas_id)
   try
   {
      this.gl_ctx = this.canvas.getContext('experimental-webgl');
+
+     this.canvas.width  = window.innerWidth;
+     this.canvas.height = window.innerHeight;
+
+     this.gl_ctx.viewport(0,0,this.canvas.width,this.canvas.height);
   }
 
   catch(exception)
@@ -336,13 +341,16 @@ Viewer.prototype.draw = function()
                          buffer_data,
                          this.gl_ctx.DYNAMIC_DRAW  );
 
-  var p_mat = mat4.perspective_matrix(45,1,0.1,500.0);
-  var v_mat = mat4.translation_matrix(0.0,0.0,-200.0);
+  var width  = window.innerWidth  / 2;
+  var height = window.innerHeight / 2;
+
+  var p_mat = mat4.orthogonal_matrix(-width,width,-height,height,0,1);
+  var v_mat = mat4.translation_matrix(0.0,0.0,0.0);
   var pv    = mat4.mat_mult(p_mat,v_mat);
 
   var location = this.gl_ctx.getUniformLocation(this.gl_program,'pv');
 
-  this.gl_ctx.uniformMatrix4fv(location,false,mat4.transpose(pv));
+  this.gl_ctx.uniformMatrix4fv(location,false,mat4.transpose(p_mat));
 
   this.gl_ctx.clearColor(0.0,0.0,0.0,1.0);
 
@@ -396,7 +404,14 @@ Viewer.prototype.send_pos = function(pos)
   this.control.x.value = diff_lng;
   this.control.y.value = diff_lat;
 
-  this.websocket.send(JSON.stringify({'request_type':REQUEST_ADD_MOTION,'motion':{'vector':{'x':diff_lng,'y':diff_lat,'z':0},'color':{'r':0,'g':0,'b':0},'visible':true}}));
+  var mot_vector  = new Vec3(diff_lng,diff_lat,0);
+  var mot_color   = new Vec3(0.0,0.0,0.0);
+  var mot_visible = true;
+  var motion      = new Motion(mot_vector,mot_color,mot_visible);
+
+  var request     = {'request_type':REQUEST_ADD_MOTION,'motion:':motion};
+
+  this.websocket.send(JSON.stringify(request));
 
   this.prev_pos = pos;
 };
