@@ -6,6 +6,12 @@ var motion_draw_viewer = null;
 
 window.onload = function()
 {
+  window.addEventListener('touchmove',function(event)
+  {
+    event.preventDefault();
+    console.log('touchmove forbidden');
+  });
+
   motion_draw_viewer = new Viewer();
 
   motion_draw_viewer.init_websocket(host,'8080','motion_draw');
@@ -134,7 +140,6 @@ function Viewer()
   this.control        = {'x' : null, 'y' : null,'acc' : null};
   this.mouse_down     = false;
   this.prev_touch_pos = null;
-  this.current_touch  = null;
 }
 
 Viewer.prototype.init_websocket = function(host,port,protocol)
@@ -236,8 +241,8 @@ Viewer.prototype.init_gl_ctx = function(canvas_id)
      this.canvas.addEventListener("touchstart",function(event)
      {
        console.log('touchdown');
-       this.current_touch = event.changedTouches[0];
        motion_draw_viewer.prev_touch_pos = [event.changedTouches[0].clientX,event.changedTouches[0].clientY];
+       console.log(JSON.stringify(motion_draw_viewer.prev_touch_pos));
      });
 
      this.canvas.addEventListener("touchend",function(event)
@@ -247,14 +252,16 @@ Viewer.prototype.init_gl_ctx = function(canvas_id)
 
      this.canvas.addEventListener("touchmove",function(event)
      {
-       var x = this.current_touch.clientX - motion_draw_viewer.prev_touch_pos[0];
-       var y = motion_draw_viewer.prev_touch_pos[1] - this.current_touch.clientY;
+       console.log('touch number: ' + event.changedTouches.length);
+       var x = (event.changedTouches[0].clientX - motion_draw_viewer.prev_touch_pos[0]) * motion_draw_viewer.canvas_zoom;
+       var y = (motion_draw_viewer.prev_touch_pos[1] - event.changedTouches[0].clientY) * motion_draw_viewer.canvas_zoom;
        var t_mat = mat4.translation_matrix(x,y,0.0);
+       console.log('abs_x: ' + event.changedTouches[0].clientX + ' abs_y: ' + event.changedTouches[0].clientY);
        console.log('x:' + x + ' y ' + y);
 
        motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
 
-       motion_draw_viewer.prev_mouse_pos = [event.clientX,event.clientY];
+       motion_draw_viewer.prev_touch_pos = [event.changedTouches[0].clientX,event.changedTouches[0].clientY];
      });
   }
 
