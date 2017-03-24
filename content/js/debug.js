@@ -4,11 +4,11 @@ const REQUEST_ADD_MOTION       = 2;
 
 var debug_client = null;
 
-function Debug_motion(m_vector,m_visible)
+function Debug_motion(m_vector,m_color,m_visible)
 {
   this.vector   = m_vector;
   this.vector.z = 0.0;
-  this.color    = {'r' : 0,'g' : 0,'b' : 0};
+  this.color    = m_color;
   this.visible  = m_visible;
 }
 
@@ -27,7 +27,7 @@ function Debug_client()
   this.vec_dec_plc   = 4;
   this.vec_scale     = 100000;
 
-  this.control       = {'x' : null, 'y' : null, 'new_line' : null};
+  this.control       = {};
 }
 
 Debug_client.prototype.init_websocket = function(host,port,protocol)
@@ -66,6 +66,7 @@ Debug_client.prototype.init_control = function()
 {
   this.control.x        = document.getElementById('c_x');
   this.control.y        = document.getElementById('c_y');
+  this.control.color    = document.getElementById('c_color');
   this.control.new_line = document.getElementById('c_new_line');
 
   this.control.x.value  = 0;
@@ -100,6 +101,25 @@ Debug_client.prototype.round_dec = function(dec_number,dec_place)
 
   return dec_number;
 }
+
+Debug_client.prototype.hex_to_rgb = function(hex_color_string)
+{
+  var rgb             = [];
+  var componen_string = '';
+  var componen_index  = 0;
+
+  for(var component = 0 ; component < 3 ; ++component)
+  {
+    componen_index = 2 * component;
+
+    component_string =
+    hex_color_string.slice(componen_index + 1,componen_index + 3);
+
+    rgb.push(parseInt(component_string,16));
+  }
+
+  return rgb;
+};
 
 function new_polyline()
 {
@@ -181,8 +201,9 @@ function map_click_handler(mouse_event)
     prev_pos = path.getAt(path.getLength() - 1);
   }
 
-  var m_vec  = debug_client.calc_motion_vector(mouse_event.latLng,prev_pos);
-  var motion = new Debug_motion(m_vec,motion_visible);
+  var m_vec   = debug_client.calc_motion_vector(mouse_event.latLng,prev_pos);
+  var m_color = debug_client.hex_to_rgb(debug_client.control.color.value);
+  var motion  = new Debug_motion(m_vec,m_color,motion_visible);
 
   debug_client.send_motion(motion);
 
