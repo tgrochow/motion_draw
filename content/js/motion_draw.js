@@ -6,7 +6,6 @@ var motion_draw_viewer = null;
 
 window.onload = function()
 {
-
   motion_draw_viewer = new Viewer();
 
   motion_draw_viewer.init_websocket(host,'8080','motion_draw');
@@ -16,10 +15,10 @@ window.onload = function()
   motion_draw_viewer.begin_drawing(20);
   motion_draw_viewer.init_navigator();
 
-  motion_draw_viewer.control.x    = document.getElementById('c_x');
-  motion_draw_viewer.control.y    = document.getElementById('c_y');
-  motion_draw_viewer.control.acc  = document.getElementById('c_acc');
-  motion_draw_viewer.control.zoom_in = document.getElementById('c_zoom_in');
+  motion_draw_viewer.control.x        = document.getElementById('c_x');
+  motion_draw_viewer.control.y        = document.getElementById('c_y');
+  motion_draw_viewer.control.acc      = document.getElementById('c_acc');
+  motion_draw_viewer.control.zoom_in  = document.getElementById('c_zoom_in');
   motion_draw_viewer.control.zoom_out = document.getElementById('c_zoom_out');
 
   motion_draw_viewer.control.zoom_in.onclick = function()
@@ -31,6 +30,14 @@ window.onload = function()
   {
     motion_draw_viewer.canvas_zoom += 0.2;
   };
+};
+
+window.onresize = function()
+{
+  motion_draw_viewer.canvas.width  = window.innerWidth;
+  motion_draw_viewer.canvas.height = window.innerHeight;
+
+  motion_draw_viewer.gl_ctx.viewport(0,0,motion_draw_viewer.canvas.width,motion_draw_viewer.canvas.height);
 };
 
 function Vec3(v_x,v_y,v_z)
@@ -76,6 +83,7 @@ function Client(client_id)
   this.id            = client_id;
 
   this.motion_array  = [];
+  this.polyline_list = [];
   this.current_index = -1;
   this.current_pos   = -1;
 }
@@ -89,11 +97,32 @@ Client.prototype.add_motion = function(m_vector,m_color,m_visible)
 
 Client.prototype.generate_polyline_list = function(origin)
 {
+  if(this.polyline_list.length === 0)
+  {
+    this.polyline_list = this.polyline_list.concat(this.calc_polyline_list(origin,0));
+  }
+
+  else
+  {
+    this.polyline_list = this.polyline_list.concat(this.update_polyline_list());
+  }
+
+  return this.polyline_list;
+};
+
+Client.prototype.update_polyline_list = function()
+{
+  return this.calc_polyline_list(this.current_pos,this.current_index);
+};
+
+Client.prototype.calc_polyline_list = function(origin,first_index)
+{
   var polyline_list  = [];
   var prev_pos       = new Vec3(origin.x,origin.y,origin.z);
   var pos            = new Vec3(origin.x,origin.y,origin.z);
+  var m_index;
 
-  for(var m_index = 0 ; m_index < this.motion_array.length ; ++m_index)
+  for(m_index = first_index ; m_index < this.motion_array.length ; ++m_index)
   {
     pos.add(this.motion_array[m_index].vector);
 
@@ -105,6 +134,9 @@ Client.prototype.generate_polyline_list = function(origin)
 
     prev_pos.add(this.motion_array[m_index].vector);
   }
+
+  this.current_pos   = pos;
+  this.current_index = m_index;
 
   return polyline_list;
 };
@@ -123,7 +155,7 @@ function Viewer()
   this.gl_program     = null;
   this.gl_buffer      = null;
 
-  this.view_matrix    = mat4.translation_matrix(0.0,0.0,0.0);
+  this.view_matrix    = mat4.identity_matrix();
 
   this.canvas_zoom    = 1.0;
   this.draw_interval  = null;
@@ -132,7 +164,7 @@ function Viewer()
   this.vec_dec_plc    = 4;
   this.vec_scale      = 100000;
 
-  this.control        = {'x' : null, 'y' : null,'acc' : null};
+  this.control        = {};
   this.mouse_down     = false;
   this.prev_touch_pos = null;
 }
@@ -421,7 +453,7 @@ Viewer.prototype.send_pos = function(pos)
 {
   this.control.acc.value = pos.coords.accuracy;
 
-  if(pos.coords.accuracy > 10)
+  if(pos.coords.accuracy > 100)
   {
     return;
   }
