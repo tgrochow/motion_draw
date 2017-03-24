@@ -168,6 +168,7 @@ function Viewer()
   this.mouse_down     = false;
   this.prev_touch_pos = null;
   this.prev_second_touch_pos = null;
+  this.to_many_touches = false;
 }
 
 Viewer.prototype.init_websocket = function(host,port,protocol)
@@ -564,13 +565,18 @@ function canvas_touchdown(event)
   if(event.touches.length == 2)
   {  
     console.log('touchdown2');
+    // Remember startposiotion of the second touch
+    motion_draw_viewer.prev_second_touch_pos = [event.touches[1].clientX, event.touches[1].clientY];
+  }
+  else if(event.touches.length == 1)
+  {
     // Remember startposiotion of the first touch
-    motion_draw_viewer.prev_second_touch_pos = [event.changedTouches[0].clientX, event.changedTouches[0].clientY];
+    motion_draw_viewer.prev_touch_pos = [event.touches[0].clientX, event.touches[0].clientY];
   }
   else
   {
-  // Remember startposiotion of the first touch
-  motion_draw_viewer.prev_touch_pos = [event.changedTouches[0].clientX, event.changedTouches[0].clientY];
+    // prevents unexpected behavior by stopping other functions
+    motion_draw_viewer.to_many_touches = true;
   }
 
   console.log(JSON.stringify(motion_draw_viewer.prev_touch_pos));
@@ -582,22 +588,22 @@ function canvas_touchdown(event)
 function canvas_touchmove(event)
 {
   // if there is only 1 touch the touchpossition is used for navigation only
-  if(event.touches.length == 1)
+  if(event.touches.length == 1 && !motion_draw_viewer.to_many_touches)
   {
     // calculate the x and y factor by using the difference between touch possitions and adjusting for the zoom factor
-    var x = (event.changedTouches[0].clientX - motion_draw_viewer.prev_touch_pos[0]) * motion_draw_viewer.canvas_zoom;
-    var y = (motion_draw_viewer.prev_touch_pos[1] - event.changedTouches[0].clientY) * motion_draw_viewer.canvas_zoom;
+    var x = (event.touches[0].clientX - motion_draw_viewer.prev_touch_pos[0]) * motion_draw_viewer.canvas_zoom;
+    var y = (motion_draw_viewer.prev_touch_pos[1] - event.touches[0].clientY) * motion_draw_viewer.canvas_zoom;
 
     // translate the viewfield
     var t_mat = mat4.translation_matrix(x,y,0.0);
     motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
   
     // remember the new touchpossitions
-    motion_draw_viewer.prev_touch_pos = [event.changedTouches[0].clientX,event.changedTouches[0].clientY];
+    motion_draw_viewer.prev_touch_pos = [event.touches[0].clientX,event.touches[0].clientY];
   }
 
   // if there are 2 touches the zoom and navigation modus will be used
-  else if(event.touches.length == 2)
+  else if(event.touches.length == 2 && !motion_draw_viewer.to_many_touches)
   {
     // ------------ Zooming ------------
     // calculate the distace between the old touchpoints
@@ -629,10 +635,6 @@ function canvas_touchmove(event)
     var t_mat = mat4.translation_matrix(x,y,0.0);
     motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
 
-    console.log("Old Center: " + old_center[0] + "//" + old_center[1]);
-    console.log("New Center: " + new_center[0] + "//" + new_center[1]);
-
-
 
     // remember new touch positions
     motion_draw_viewer.prev_touch_pos = [event.touches[0].clientX, event.touches[0].clientY];
@@ -649,5 +651,10 @@ function canvas_touchend(event)
   if(event.touches.length == 1)
   {
     motion_draw_viewer.prev_touch_pos = [event.touches[0].clientX, event.touches[0].clientY];
+  }
+  else if(event.touches.length == 0)
+  {
+    // reset stop flag 
+    motion_draw_viewer.to_many_touches = false;
   }
 }
