@@ -132,7 +132,7 @@ function init_map()
 {
   debug_client = new Debug_client();
 
-  debug_client.init_websocket(host,'8080','motion_draw');
+  debug_client.init_websocket(host,'9080','motion_draw');
   debug_client.init_control();
 
   var map_properties =

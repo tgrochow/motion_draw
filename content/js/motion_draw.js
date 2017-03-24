@@ -8,7 +8,7 @@ window.onload = function()
 {
   motion_draw_viewer = new Viewer();
 
-  motion_draw_viewer.init_websocket(host,'8080','motion_draw');
+  motion_draw_viewer.init_websocket(host,'9080','motion_draw');
   motion_draw_viewer.init_gl_ctx('viewer_canvas');
   motion_draw_viewer.load_gl_program('viewer_vertex','viewer_fragment');
   motion_draw_viewer.prepare_gl_buffer();
@@ -167,6 +167,7 @@ function Viewer()
   this.control        = {};
   this.mouse_down     = false;
   this.prev_touch_pos = null;
+  this.prev_second_touch_pos = null;
 }
 
 Viewer.prototype.init_websocket = function(host,port,protocol)
@@ -265,31 +266,11 @@ Viewer.prototype.init_gl_ctx = function(canvas_id)
 
      this.gl_ctx.viewport(0,0,this.canvas.width,this.canvas.height);
 
-     this.canvas.addEventListener("touchstart",function(event)
-     {
-       console.log('touchdown');
-       motion_draw_viewer.prev_touch_pos = [event.changedTouches[0].clientX,event.changedTouches[0].clientY];
-       console.log(JSON.stringify(motion_draw_viewer.prev_touch_pos));
-     });
+     this.canvas.addEventListener("touchstart", canvas_touchdown);
 
-     this.canvas.addEventListener("touchend",function(event)
-     {
-       console.log('touchend');
-     });
+     this.canvas.addEventListener("touchmove", canvas_touchmove);
 
-     this.canvas.addEventListener("touchmove",function(event)
-     {
-       console.log('touch number: ' + event.changedTouches.length);
-       var x = (event.changedTouches[0].clientX - motion_draw_viewer.prev_touch_pos[0]) * motion_draw_viewer.canvas_zoom;
-       var y = (motion_draw_viewer.prev_touch_pos[1] - event.changedTouches[0].clientY) * motion_draw_viewer.canvas_zoom;
-       var t_mat = mat4.translation_matrix(x,y,0.0);
-       console.log('abs_x: ' + event.changedTouches[0].clientX + ' abs_y: ' + event.changedTouches[0].clientY);
-       console.log('x:' + x + ' y ' + y);
-
-       motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
-
-       motion_draw_viewer.prev_touch_pos = [event.changedTouches[0].clientX,event.changedTouches[0].clientY];
-     });
+     this.canvas.addEventListener("touchend", canvas_touchend);
   }
 
   catch(exception)
@@ -571,5 +552,83 @@ function nav_error(err)
     case err.POSITION_UNAVAILABLE: break;
     case err.TIMEOUT:              break;
     case err.UNKNOWN_ERROR:        break;
+  }
+}
+
+// calback funtion for touchstart
+function canvas_touchdown(event)
+{
+  console.log('touchdown: ' + event.touches.length);
+
+  // check number of touches
+  if(event.touches.length == 2)
+  {  
+    console.log('touchdown2');
+    // Remember startposiotion of the first touch
+    motion_draw_viewer.prev_second_touch_pos = [event.changedTouches[0].clientX, event.changedTouches[0].clientY];
+  }
+  else
+  {
+  // Remember startposiotion of the first touch
+  motion_draw_viewer.prev_touch_pos = [event.changedTouches[0].clientX, event.changedTouches[0].clientY];
+  }
+
+  console.log(JSON.stringify(motion_draw_viewer.prev_touch_pos));
+}
+
+
+// callback for touchmove 
+// this function is responsible for navigation and zooming
+function canvas_touchmove(event)
+{
+  // if there is only 1 touch the touchpossition is used for navigation
+  if(event.touches.length == 1)
+  {
+    // calculate the x and y factor by using the difference between touch possitions and adjusting for the zoom factor
+    var x = (event.changedTouches[0].clientX - motion_draw_viewer.prev_touch_pos[0]) * motion_draw_viewer.canvas_zoom;
+    var y = (motion_draw_viewer.prev_touch_pos[1] - event.changedTouches[0].clientY) * motion_draw_viewer.canvas_zoom;
+
+    // translate the viewfield
+    var t_mat = mat4.translation_matrix(x,y,0.0);
+    motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
+  
+    // remember the new touchpossitions
+    motion_draw_viewer.prev_touch_pos = [event.changedTouches[0].clientX,event.changedTouches[0].clientY];
+  }
+
+  // if there are 2 touches the zoom modus will be used
+  else if(event.touches.length == 2)
+  {
+    // calculate the distace between the old touchpoints
+    var old_distance = [motion_draw_viewer.prev_touch_pos[0] - motion_draw_viewer.prev_second_touch_pos[0], 
+                        motion_draw_viewer.prev_touch_pos[1] - motion_draw_viewer.prev_second_touch_pos[1]];
+    old_distance = Math.sqrt(Math.pow(old_distance[0], 2) + Math.pow(old_distance[1], 2));
+    
+    // calculate the distace between the new touchpoints
+    var new_distance_vector = [event.touches[0].clientX - event.touches[1].clientX, 
+                        event.touches[0].clientY - event.touches[1].clientY];
+    var new_distance = Math.sqrt(Math.pow(new_distance_vector[0], 2) + Math.pow(new_distance_vector[1], 2));
+
+    // calculate the zoomfactor from the difference between the old and the new distance
+    motion_draw_viewer.canvas_zoom *= (new_distance / old_distance);
+
+    console.log("Old Distance: " + old_distance);
+    console.log("New Distance: " + new_distance);
+
+    // remember new touch positions
+    motion_draw_viewer.prev_touch_pos = [event.touches[0].clientX, event.touches[0].clientY];
+    motion_draw_viewer.prev_second_touch_pos = [event.touches[1].clientX, event.touches[1].clientY];
+  }
+}
+
+// callback for touchend
+function canvas_touchend(event)
+{
+  console.log('touchend');
+  
+  // remember the position of the last touch as the position of the first touch 
+  if(event.touches.length == 1)
+  {
+    motion_draw_viewer.prev_touch_pos = [event.touches[0].clientX, event.touches[0].clientY];
   }
 }
