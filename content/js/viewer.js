@@ -425,6 +425,18 @@ Viewer.prototype.round_dec = function(dec_number,dec_place)
   return dec_number;
 }
 
+Viewer.prototype.hex_to_rgb = function(hex_color_string)
+{
+  var rgb = [];
+
+  for(var c_index = 0 ;c_index < 3 ; ++c_index)
+  {
+    
+  }
+
+  return rgb;
+};
+
 Viewer.prototype.send_pos = function(pos)
 {
   this.control.acc.value = pos.coords.accuracy;
