@@ -581,7 +581,7 @@ function canvas_touchdown(event)
 // this function is responsible for navigation and zooming
 function canvas_touchmove(event)
 {
-  // if there is only 1 touch the touchpossition is used for navigation
+  // if there is only 1 touch the touchpossition is used for navigation only
   if(event.touches.length == 1)
   {
     // calculate the x and y factor by using the difference between touch possitions and adjusting for the zoom factor
@@ -596,13 +596,14 @@ function canvas_touchmove(event)
     motion_draw_viewer.prev_touch_pos = [event.changedTouches[0].clientX,event.changedTouches[0].clientY];
   }
 
-  // if there are 2 touches the zoom modus will be used
+  // if there are 2 touches the zoom and navigation modus will be used
   else if(event.touches.length == 2)
   {
+    // ------------ Zooming ------------
     // calculate the distace between the old touchpoints
-    var old_distance = [motion_draw_viewer.prev_touch_pos[0] - motion_draw_viewer.prev_second_touch_pos[0], 
-                        motion_draw_viewer.prev_touch_pos[1] - motion_draw_viewer.prev_second_touch_pos[1]];
-    old_distance = Math.sqrt(Math.pow(old_distance[0], 2) + Math.pow(old_distance[1], 2));
+    var old_distance_vector = [motion_draw_viewer.prev_touch_pos[0] - motion_draw_viewer.prev_second_touch_pos[0], 
+                              motion_draw_viewer.prev_touch_pos[1] - motion_draw_viewer.prev_second_touch_pos[1]];
+    var old_distance = Math.sqrt(Math.pow(old_distance_vector[0], 2) + Math.pow(old_distance_vector[1], 2));
     
     // calculate the distace between the new touchpoints
     var new_distance_vector = [event.touches[0].clientX - event.touches[1].clientX, 
@@ -610,10 +611,28 @@ function canvas_touchmove(event)
     var new_distance = Math.sqrt(Math.pow(new_distance_vector[0], 2) + Math.pow(new_distance_vector[1], 2));
 
     // calculate the zoomfactor from the difference between the old and the new distance
-    motion_draw_viewer.canvas_zoom *= (new_distance / old_distance);
+    motion_draw_viewer.canvas_zoom *= (old_distance / new_distance);
 
-    console.log("Old Distance: " + old_distance);
-    console.log("New Distance: " + new_distance);
+
+    // ------------ Navigation ------------
+    // calculate the centerpoints between the fingers
+    var old_center = [(old_distance_vector[0] / 2) + motion_draw_viewer.prev_touch_pos[0], 
+                      (old_distance_vector[1] / 2) + motion_draw_viewer.prev_touch_pos[1]];
+    var new_center = [(new_distance_vector[0] / 2) + event.touches[0].clientX,
+                      (new_distance_vector[1] / 2) + event.touches[0].clientY];
+
+    // calculate the x and y factor by using the difference between touch possitions and adjusting for the zoom factor
+    var x = (new_center[0] - old_center[0]) * motion_draw_viewer.canvas_zoom;
+    var y = (old_center[1] - new_center[1]) * motion_draw_viewer.canvas_zoom;
+
+    // translate the viewfield
+    var t_mat = mat4.translation_matrix(x,y,0.0);
+    motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
+
+    console.log("Old Center: " + old_center[0] + "//" + old_center[1]);
+    console.log("New Center: " + new_center[0] + "//" + new_center[1]);
+
+
 
     // remember new touch positions
     motion_draw_viewer.prev_touch_pos = [event.touches[0].clientX, event.touches[0].clientY];
