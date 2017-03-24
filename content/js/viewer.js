@@ -428,10 +428,11 @@ Viewer.prototype.round_dec = function(dec_number,dec_place)
 Viewer.prototype.hex_to_rgb = function(hex_color_string)
 {
   var rgb = [];
+  var test = [];
 
   for(var c_index = 0 ;c_index < 3 ; ++c_index)
   {
-    
+
   }
 
   return rgb;
