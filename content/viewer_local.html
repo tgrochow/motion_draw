@@ -8,11 +8,11 @@
 <title>motion draw viewer</title>
 
 <meta charset = "utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
 
-<link rel = "stylesheet" type = "text/css" href = "css/viewer.css">
+<link rel = "stylesheet" type = "text/css" href = "css/motion_viewer.css">
 
-<script language = "javascript" type = "text/javascript">var host = 'wss://localhost';</script>
+<script>var host = 'wss://localhost';</script>
 <script language = "javascript" type = "text/javascript" src = "js/gl_math.js"></script>
 <script language = "javascript" type = "text/javascript" src = "js/viewer.js"></script>
 
@@ -45,7 +45,21 @@ void main()
 
 <body>
 
-<canvas id="viewer_canvas" width="500px" height="500px"></canvas>
+<div id="body">
+
+<canvas id="viewer_canvas"></canvas>
+
+<div id = "control">
+
+  <form>
+    <button id = "c_zoom_in"  type="button">zoom in</button>
+    <button id = "c_zoom_out" type="button">zoom out</button>
+    <input  id = "c_color"    type="color">
+  </form>
+
+</div>
+
+</div>
 
 </body>
 
