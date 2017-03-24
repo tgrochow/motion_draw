@@ -6,11 +6,6 @@ var motion_draw_viewer = null;
 
 window.onload = function()
 {
-  window.addEventListener('touchmove',function(event)
-  {
-    event.preventDefault();
-    console.log('touchmove forbidden');
-  });
 
   motion_draw_viewer = new Viewer();
 
