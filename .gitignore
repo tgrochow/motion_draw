@@ -5,3 +5,6 @@ jspm_packages/
 
 # npm cache
 .npm
+
+# dolphin directory configuration
+.directory

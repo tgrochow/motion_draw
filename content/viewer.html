@@ -19,11 +19,15 @@
 <script id="viewer_vertex" type="x-shader/x-vertex">
 
 attribute vec3 pos;
+attribute vec3 color;
+
+varying vec3 frag_color;
 
 uniform mat4 pv;
 
 void main()
 {
+  frag_color  = color;
   gl_Position = pv * vec4(pos,1.0);
 }
 
@@ -33,9 +37,11 @@ void main()
 
 precision mediump float;
 
+varying vec3 frag_color;
+
 void main()
 {
-  gl_FragColor = vec4(0.0);
+  gl_FragColor = vec4(frag_color,1.0);
 }
 
 </script>

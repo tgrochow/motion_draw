@@ -8,7 +8,7 @@ window.onload = function()
 {
   motion_draw_viewer = new Viewer();
 
-  motion_draw_viewer.init_websocket(host,'8080','motion_draw');
+  motion_draw_viewer.init_websocket(host,'9080','motion_draw');
   motion_draw_viewer.init_gl_ctx('viewer_canvas');
   motion_draw_viewer.load_gl_program('viewer_vertex','viewer_fragment');
   motion_draw_viewer.prepare_gl_buffer();
@@ -81,6 +81,7 @@ function Client(client_id)
 
   this.motion_array  = [];
   this.polyline_list = [];
+  this.color_list    = [];
   this.current_index = -1;
   this.current_pos   = -1;
 }
@@ -94,17 +95,22 @@ Client.prototype.add_motion = function(m_vector,m_color,m_visible)
 
 Client.prototype.generate_polyline_list = function(origin)
 {
+  var line_list;
+
   if(this.polyline_list.length === 0)
   {
-    this.polyline_list = this.polyline_list.concat(this.calc_polyline_list(origin,0));
+    line_list = this.calc_polyline_list(origin,0);
   }
 
   else
   {
-    this.polyline_list = this.polyline_list.concat(this.update_polyline_list());
+    line_list = this.update_polyline_list();
   }
 
-  return this.polyline_list;
+  this.polyline_list = this.polyline_list.concat(line_list[0]);
+  this.color_list = this.color_list.concat(line_list[1]);
+
+  return [this.polyline_list,this.color_list];
 };
 
 Client.prototype.update_polyline_list = function()
@@ -115,6 +121,7 @@ Client.prototype.update_polyline_list = function()
 Client.prototype.calc_polyline_list = function(origin,first_index)
 {
   var polyline_list  = [];
+  var color_list     = []
   var prev_pos       = new Vec3(origin.x,origin.y,origin.z);
   var pos            = new Vec3(origin.x,origin.y,origin.z);
   var m_index;
@@ -127,6 +134,8 @@ Client.prototype.calc_polyline_list = function(origin,first_index)
     {
       polyline_list = polyline_list.concat(prev_pos.get_array());
       polyline_list = polyline_list.concat(pos.get_array());
+      color_list    = color_list.concat(this.motion_array[m_index].color);
+      color_list    = color_list.concat(this.motion_array[m_index].color);
     }
 
     prev_pos.add(this.motion_array[m_index].vector);
@@ -135,7 +144,7 @@ Client.prototype.calc_polyline_list = function(origin,first_index)
   this.current_pos   = pos;
   this.current_index = m_index;
 
-  return polyline_list;
+  return [polyline_list,color_list];
 };
 
 function Viewer()
@@ -150,7 +159,8 @@ function Viewer()
   this.canvas         = null;
   this.gl_ctx         = null;
   this.gl_program     = null;
-  this.gl_buffer      = null;
+  this.gl_buffer      = {};
+  this.attr_loc       = {};
 
   this.view_matrix    = mat4.identity_matrix();
 
@@ -351,20 +361,29 @@ Viewer.prototype.load_gl_program = function(vs_id,fs_id)
 
 Viewer.prototype.prepare_gl_buffer = function()
 {
-  this.gl_buffer = this.gl_ctx.createBuffer();
+  this.gl_buffer.position = this.gl_ctx.createBuffer();
+  this.gl_buffer.color    = this.gl_ctx.createBuffer();
+  this.attr_loc.position  = this.get_attrib_loc('pos');
+  this.attr_loc.color     = this.get_attrib_loc('color');
 
-  var attrib_loc = this.gl_ctx.getAttribLocation(this.gl_program,'pos');
+  //this.gl_ctx.enableVertexAttribArray(this.attr_loc.position);
+  //this.gl_ctx.enableVertexAttribArray(this.attr_loc.color);
+
+  //this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer.position);
+  //this.gl_ctx.enableVertexAttribArray(attrib_loc);
+  //this.gl_ctx.vertexAttribPointer(attrib_loc,3,this.gl_ctx.FLOAT,false,0,0);
+};
+
+Viewer.prototype.get_attrib_loc = function(attribute_name)
+{
+  var attrib_loc = this.gl_ctx.getAttribLocation(this.gl_program,attribute_name);
 
   if(attrib_loc === -1)
   {
-    console.log('webGL: vertex attribute not found');
-
-    return;
+    console.log('webGL: vertex attribute ' + attribute_name + ' not found');
   }
 
-  this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer);
-  this.gl_ctx.enableVertexAttribArray(attrib_loc);
-  this.gl_ctx.vertexAttribPointer(attrib_loc,3,this.gl_ctx.FLOAT,false,0,0);
+  return attrib_loc;
 };
 
 Viewer.prototype.begin_drawing = function(update_interval)
@@ -376,6 +395,7 @@ Viewer.prototype.draw = function()
 {
   var client_line_list = null;
   var polyline_list    = [];
+  var color_list       = [];
 
   var origin = new Vec3(0.0,0.0,0.0);
 
@@ -383,15 +403,35 @@ Viewer.prototype.draw = function()
   {
     client_line_list = this.client_list[c_index].generate_polyline_list(origin);
 
-    polyline_list    = polyline_list.concat(client_line_list);
+    polyline_list    = polyline_list.concat(client_line_list[0]);
+    color_list       = color_list.concat(client_line_list[1]);
   }
 
   if(polyline_list.length < 6) return;
 
-  buffer_data = new Float32Array(polyline_list);
+  var position_buffer = new Float32Array(polyline_list);
+  var color_buffer    = new Uint8Array(color_list);
+
+  this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer.position);
+  this.gl_ctx.enableVertexAttribArray(this.attr_loc.position);
 
   this.gl_ctx.bufferData(this.gl_ctx.ARRAY_BUFFER,
-                         buffer_data,
+                         position_buffer,
+                         this.gl_ctx.DYNAMIC_DRAW  );
+
+  this.gl_ctx.vertexAttribPointer(this.attr_loc.position,3,this.gl_ctx.FLOAT,false,0,0);
+
+  this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer.color);
+  this.gl_ctx.enableVertexAttribArray(this.attr_loc.color);
+
+  this.gl_ctx.bufferData(this.gl_ctx.ARRAY_BUFFER,
+                         color_buffer,
+                         this.gl_ctx.DYNAMIC_DRAW  );
+
+  this.gl_ctx.vertexAttribPointer(this.attr_loc.color,3,this.gl_ctx.UNSIGNED_BYTE,true,0,0);
+
+  this.gl_ctx.bufferData(this.gl_ctx.ARRAY_BUFFER,
+                         color_buffer,
                          this.gl_ctx.DYNAMIC_DRAW  );
 
   var width  = this.canvas_zoom * window.innerWidth  / 2;
@@ -427,12 +467,18 @@ Viewer.prototype.round_dec = function(dec_number,dec_place)
 
 Viewer.prototype.hex_to_rgb = function(hex_color_string)
 {
-  var rgb = [];
-  var test = [];
+  var rgb             = [];
+  var componen_string = '';
+  var componen_index  = 0;
 
-  for(var c_index = 0 ;c_index < 3 ; ++c_index)
+  for(var component = 0 ; component < 3 ; ++component)
   {
+    componen_index = 2 * component;
 
+    component_string =
+    hex_color_string.slice(componen_index + 1,componen_index + 3);
+
+    rgb.push(parseInt(component_string,16));
   }
 
   return rgb;
