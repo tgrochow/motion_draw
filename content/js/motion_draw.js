@@ -20,6 +20,7 @@ window.onload = function()
   motion_draw_viewer.control.acc      = document.getElementById('c_acc');
   motion_draw_viewer.control.zoom_in  = document.getElementById('c_zoom_in');
   motion_draw_viewer.control.zoom_out = document.getElementById('c_zoom_out');
+  motion_draw_viewer.control.color    = document.getElementById('c_color');
 
   motion_draw_viewer.control.zoom_in.onclick = function()
   {
@@ -84,6 +85,7 @@ function Client(client_id)
 
   this.motion_array  = [];
   this.polyline_list = [];
+  this.color_list    = [];
   this.current_index = -1;
   this.current_pos   = -1;
 }
@@ -97,17 +99,22 @@ Client.prototype.add_motion = function(m_vector,m_color,m_visible)
 
 Client.prototype.generate_polyline_list = function(origin)
 {
+  var line_list;
+
   if(this.polyline_list.length === 0)
   {
-    this.polyline_list = this.polyline_list.concat(this.calc_polyline_list(origin,0));
+    line_list = this.calc_polyline_list(origin,0);
   }
 
   else
   {
-    this.polyline_list = this.polyline_list.concat(this.update_polyline_list());
+    line_list = this.update_polyline_list();
   }
 
-  return this.polyline_list;
+  this.polyline_list = this.polyline_list.concat(line_list[0]);
+  this.color_list = this.color_list.concat(line_list[1]);
+
+  return [this.polyline_list,this.color_list];
 };
 
 Client.prototype.update_polyline_list = function()
@@ -118,6 +125,7 @@ Client.prototype.update_polyline_list = function()
 Client.prototype.calc_polyline_list = function(origin,first_index)
 {
   var polyline_list  = [];
+  var color_list     = []
   var prev_pos       = new Vec3(origin.x,origin.y,origin.z);
   var pos            = new Vec3(origin.x,origin.y,origin.z);
   var m_index;
@@ -130,6 +138,8 @@ Client.prototype.calc_polyline_list = function(origin,first_index)
     {
       polyline_list = polyline_list.concat(prev_pos.get_array());
       polyline_list = polyline_list.concat(pos.get_array());
+      color_list    = color_list.concat(this.motion_array[m_index].color);
+      color_list    = color_list.concat(this.motion_array[m_index].color);
     }
 
     prev_pos.add(this.motion_array[m_index].vector);
@@ -138,7 +148,7 @@ Client.prototype.calc_polyline_list = function(origin,first_index)
   this.current_pos   = pos;
   this.current_index = m_index;
 
-  return polyline_list;
+  return [polyline_list,color_list];
 };
 
 function Viewer()
@@ -153,7 +163,8 @@ function Viewer()
   this.canvas         = null;
   this.gl_ctx         = null;
   this.gl_program     = null;
-  this.gl_buffer      = null;
+  this.gl_buffer      = {};
+  this.attr_loc       = {};
 
   this.view_matrix    = mat4.identity_matrix();
 
@@ -357,20 +368,22 @@ Viewer.prototype.load_gl_program = function(vs_id,fs_id)
 
 Viewer.prototype.prepare_gl_buffer = function()
 {
-  this.gl_buffer = this.gl_ctx.createBuffer();
+  this.gl_buffer.position = this.gl_ctx.createBuffer();
+  this.gl_buffer.color    = this.gl_ctx.createBuffer();
+  this.attr_loc.position  = this.get_attrib_loc('pos');
+  this.attr_loc.color     = this.get_attrib_loc('color');
+};
 
-  var attrib_loc = this.gl_ctx.getAttribLocation(this.gl_program,'pos');
+Viewer.prototype.get_attrib_loc = function(attribute_name)
+{
+  var attrib_loc = this.gl_ctx.getAttribLocation(this.gl_program,attribute_name);
 
   if(attrib_loc === -1)
   {
-    console.log('webGL: vertex attribute not found');
-
-    return;
+    console.log('webGL: vertex attribute ' + attribute_name + ' not found');
   }
 
-  this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer);
-  this.gl_ctx.enableVertexAttribArray(attrib_loc);
-  this.gl_ctx.vertexAttribPointer(attrib_loc,3,this.gl_ctx.FLOAT,false,0,0);
+  return attrib_loc;
 };
 
 Viewer.prototype.begin_drawing = function(update_interval)
@@ -382,6 +395,7 @@ Viewer.prototype.draw = function()
 {
   var client_line_list = null;
   var polyline_list    = [];
+  var color_list       = [];
 
   var origin = new Vec3(0.0,0.0,0.0);
 
@@ -389,15 +403,35 @@ Viewer.prototype.draw = function()
   {
     client_line_list = this.client_list[c_index].generate_polyline_list(origin);
 
-    polyline_list    = polyline_list.concat(client_line_list);
+    polyline_list    = polyline_list.concat(client_line_list[0]);
+    color_list       = color_list.concat(client_line_list[1]);
   }
 
   if(polyline_list.length < 6) return;
 
-  buffer_data = new Float32Array(polyline_list);
+  var position_buffer = new Float32Array(polyline_list);
+  var color_buffer    = new Uint8Array(color_list);
+
+  this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer.position);
+  this.gl_ctx.enableVertexAttribArray(this.attr_loc.position);
 
   this.gl_ctx.bufferData(this.gl_ctx.ARRAY_BUFFER,
-                         buffer_data,
+                         position_buffer,
+                         this.gl_ctx.DYNAMIC_DRAW  );
+
+  this.gl_ctx.vertexAttribPointer(this.attr_loc.position,3,this.gl_ctx.FLOAT,false,0,0);
+
+  this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer.color);
+  this.gl_ctx.enableVertexAttribArray(this.attr_loc.color);
+
+  this.gl_ctx.bufferData(this.gl_ctx.ARRAY_BUFFER,
+                         color_buffer,
+                         this.gl_ctx.DYNAMIC_DRAW  );
+
+  this.gl_ctx.vertexAttribPointer(this.attr_loc.color,3,this.gl_ctx.UNSIGNED_BYTE,true,0,0);
+
+  this.gl_ctx.bufferData(this.gl_ctx.ARRAY_BUFFER,
+                         color_buffer,
                          this.gl_ctx.DYNAMIC_DRAW  );
 
   var width  = this.canvas_zoom * window.innerWidth  / 2;
@@ -416,6 +450,25 @@ Viewer.prototype.draw = function()
 
   this.gl_ctx.drawArrays(this.gl_ctx.LINES,0,polyline_list.length / 3);
 }
+
+Viewer.prototype.hex_to_rgb = function(hex_color_string)
+{
+  var rgb             = [];
+  var componen_string = '';
+  var componen_index  = 0;
+
+  for(var component = 0 ; component < 3 ; ++component)
+  {
+    componen_index = 2 * component;
+
+    component_string =
+    hex_color_string.slice(componen_index + 1,componen_index + 3);
+
+    rgb.push(parseInt(component_string,16));
+  }
+
+  return rgb;
+};
 
 Viewer.prototype.round_dec = function(dec_number,dec_place)
 {
@@ -463,7 +516,7 @@ Viewer.prototype.send_pos = function(pos)
   this.control.y.value = diff_lat;
 
   var mot_vector  = new Vec3(diff_lng,diff_lat,0);
-  var mot_color   = new Vec3(0.0,0.0,0.0);
+  var mot_color   = this.hex_to_rgb(this.control.color.value);
   var mot_visible = true;
   var motion      = new Motion(mot_vector,mot_color,mot_visible);
 
@@ -563,7 +616,7 @@ function canvas_touchdown(event)
 
   // check number of touches
   if(event.touches.length == 2)
-  {  
+  {
     console.log('touchdown2');
     // Remember startposiotion of the second touch
     motion_draw_viewer.prev_second_touch_pos = [event.touches[1].clientX, event.touches[1].clientY];
@@ -583,7 +636,7 @@ function canvas_touchdown(event)
 }
 
 
-// callback for touchmove 
+// callback for touchmove
 // this function is responsible for navigation and zooming
 function canvas_touchmove(event)
 {
@@ -597,7 +650,7 @@ function canvas_touchmove(event)
     // translate the viewfield
     var t_mat = mat4.translation_matrix(x,y,0.0);
     motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
-  
+
     // remember the new touchpossitions
     motion_draw_viewer.prev_touch_pos = [event.touches[0].clientX,event.touches[0].clientY];
   }
@@ -607,12 +660,12 @@ function canvas_touchmove(event)
   {
     // ------------ Zooming ------------
     // calculate the distace between the old touchpoints
-    var old_distance_vector = [motion_draw_viewer.prev_touch_pos[0] - motion_draw_viewer.prev_second_touch_pos[0], 
+    var old_distance_vector = [motion_draw_viewer.prev_touch_pos[0] - motion_draw_viewer.prev_second_touch_pos[0],
                               motion_draw_viewer.prev_touch_pos[1] - motion_draw_viewer.prev_second_touch_pos[1]];
     var old_distance = Math.sqrt(Math.pow(old_distance_vector[0], 2) + Math.pow(old_distance_vector[1], 2));
-    
+
     // calculate the distace between the new touchpoints
-    var new_distance_vector = [event.touches[0].clientX - event.touches[1].clientX, 
+    var new_distance_vector = [event.touches[0].clientX - event.touches[1].clientX,
                         event.touches[0].clientY - event.touches[1].clientY];
     var new_distance = Math.sqrt(Math.pow(new_distance_vector[0], 2) + Math.pow(new_distance_vector[1], 2));
 
@@ -622,7 +675,7 @@ function canvas_touchmove(event)
 
     // ------------ Navigation ------------
     // calculate the centerpoints between the fingers
-    var old_center = [(old_distance_vector[0] / 2) + motion_draw_viewer.prev_touch_pos[0], 
+    var old_center = [(old_distance_vector[0] / 2) + motion_draw_viewer.prev_touch_pos[0],
                       (old_distance_vector[1] / 2) + motion_draw_viewer.prev_touch_pos[1]];
     var new_center = [(new_distance_vector[0] / 2) + event.touches[0].clientX,
                       (new_distance_vector[1] / 2) + event.touches[0].clientY];
@@ -646,15 +699,15 @@ function canvas_touchmove(event)
 function canvas_touchend(event)
 {
   console.log('touchend');
-  
-  // remember the position of the last touch as the position of the first touch 
+
+  // remember the position of the last touch as the position of the first touch
   if(event.touches.length == 1)
   {
     motion_draw_viewer.prev_touch_pos = [event.touches[0].clientX, event.touches[0].clientY];
   }
   else if(event.touches.length == 0)
   {
-    // reset stop flag 
+    // reset stop flag
     motion_draw_viewer.to_many_touches = false;
   }
 }
