@@ -46,26 +46,28 @@ void main()
 
 </script>
 
-<div id="body">
+  <div id="body">
 
-<canvas id="viewer_canvas"></canvas>
+    <canvas id="viewer_canvas"></canvas>
 
-<div id = "control">
+    <div id = "control">
+      
+      <form id = "c_menu" style="display: block">
+        x:    <input id = "c_x"    type = "text" readonly>
+        y:    <input id = "c_y"    type = "text" readonly><br>
+        acc:  <input id = "c_acc"  type = "text" readonly>
 
-  <form>
-    x:    <input id = "c_x"    type = "text" readonly>
-    y:    <input id = "c_y"    type = "text" readonly><br>
-    acc:  <input id = "c_acc"  type = "text" readonly>
+        <button id = "c_zoom_in"  type="button">zoom in</button>
+        <button id = "c_zoom_in"  type="button">zoom in</button>
+        <button id = "c_zoom_out" type="button">zoom out</button>
+        <input  id = "c_color"    type="color">
+      </form>
+      
+      <button id = "c_toggle_menu" type="button">...</button>
 
-    <button id = "c_zoom_in"  type="button">zoom in</button>
-    <button id = "c_zoom_in"  type="button">zoom in</button>
-    <button id = "c_zoom_out" type="button">zoom out</button>
-    <input  id = "c_color"    type="color">
-  </form>
+    </div>
 
-</div>
-
-</div>
+  </div>
 
 </body>
 

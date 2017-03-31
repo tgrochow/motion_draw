@@ -22,6 +22,26 @@ window.onload = function()
   motion_draw_viewer.control.zoom_out = document.getElementById('c_zoom_out');
   motion_draw_viewer.control.color    = document.getElementById('c_color');
 
+  motion_draw_viewer.control.toggle_menu    = document.getElementById('c_toggle_menu');
+  motion_draw_viewer.control.menuBox = document.getElementById('c_menu');
+
+  // hide menu on load
+  motion_draw_viewer.control.menuBox.style.display = "none";
+  // show/hide the menu when toggleMenu is pressed
+  motion_draw_viewer.control.toggle_menu.onclick = function toggleMenu() 
+  {
+    // if is menuBox displayed, hide it
+    if(motion_draw_viewer.control.menuBox.style.display == "block") 
+    { 
+      motion_draw_viewer.control.menuBox.style.display = "none";
+    }
+    // if is menuBox hidden, display it
+    else 
+    { 
+      motion_draw_viewer.control.menuBox.style.display = "block";
+    }
+  };
+
   motion_draw_viewer.control.zoom_in.onclick = function()
   {
     motion_draw_viewer.canvas_zoom -= 0.2;

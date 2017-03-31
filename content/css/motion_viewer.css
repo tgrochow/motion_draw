@@ -9,9 +9,9 @@
 
 #control
 {
-  position:  absolute;
+  position: absolute;
+  bottom: 0;
   left:      0px;
-  top:       0px;
   padding:   5px;
 
   background-color: #eee;
