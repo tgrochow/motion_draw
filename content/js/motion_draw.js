@@ -1,3 +1,8 @@
+//    Moion Draw Viewer
+//    Tony Grochow
+//    Jonathan F. Siefert
+//    MIT license
+
 const REQUEST_GET_ID           = 0;
 const REQUEST_GET_CLIENT_LIST  = 1;
 const REQUEST_ADD_MOTION       = 2;

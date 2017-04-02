@@ -15,6 +15,8 @@
 <script>var host = 'wss://motion-draw.sytes.net';</script>
 <script language = "javascript" type = "text/javascript" src = "js/gl_math.js"></script>
 <script language = "javascript" type = "text/javascript" src = "js/motion_draw.js"></script>
+<script language = "javascript" type = "text/javascript" src = "js/NoSleep.js"></script>
+
 
 <script id="viewer_vertex" type="x-shader/x-vertex">
 
@@ -46,6 +48,7 @@ void main()
 
 </script>
 
+
   <div id="body">
 
     <canvas id="viewer_canvas"></canvas>
@@ -62,11 +65,32 @@ void main()
         <button id = "c_zoom_in"  type="button">zoom in</button>
         <button id = "c_zoom_in"  type="button">zoom in</button>
         <button id = "c_zoom_out" type="button">zoom out</button>
+        <input type="button" id="toggle" value="enable sleep" />
       </form>
       
       <button id = "c_toggle_menu" type="button">...</button>
 
     </div>
+
+    <script>
+      var noSleep = new NoSleep();
+      noSleep.enable(); // keep the screen on!
+
+      var wakeLockEnabled = true;
+      var toggleEl = document.querySelector("#toggle");
+      toggleEl.addEventListener('click', function() {
+        if (!wakeLockEnabled) {
+          noSleep.enable(); // keep the screen on!
+          wakeLockEnabled = true;
+          toggleEl.value = "enable sleep";
+        } else {
+          noSleep.disable(); // let the screen turn off.
+          wakeLockEnabled = false;
+          toggleEl.value = "disable sleep";
+        }
+      }, false);
+    </script>
+
 
   </div>
 
