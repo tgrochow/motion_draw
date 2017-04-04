@@ -1,4 +1,4 @@
 #!/bin/bash
-kill $(pidof "node server.js")
+kill $(pidof node server.js)
 git pull
-node server.js
+nohup node server.js &
