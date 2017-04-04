@@ -13,6 +13,7 @@
 <link rel = "stylesheet" type = "text/css" href = "css/motion_viewer.css">
 
 <script>var host = 'wss://motion-draw.sytes.net';</script>
+<script>var host_l = 'wss://localhost';</script>
 <script language = "javascript" type = "text/javascript" src = "js/gl_math.js"></script>
 <script language = "javascript" type = "text/javascript" src = "js/motion_draw.js"></script>
 <script language = "javascript" type = "text/javascript" src = "js/NoSleep.js"></script>
@@ -61,11 +62,12 @@ void main()
         acc:  <input id = "c_acc"  type = "text" readonly style="width: 30px;"><br />
         
         <input  id = "c_color"    type="color">
+        <input type="button" id="toggle_drawing" value="stop drawing" />
 
         <button id = "c_zoom_in"  type="button">zoom in</button>
         <button id = "c_zoom_in"  type="button">zoom in</button>
         <button id = "c_zoom_out" type="button">zoom out</button>
-        <input type="button" id="toggle" value="enable sleep" />
+        <input type="button" id="toggle_NoSleep" value="enable sleep" />
       </form>
       
       <button id = "c_toggle_menu" type="button">...</button>
@@ -73,11 +75,12 @@ void main()
     </div>
 
     <script>
+      // ----- NoSleep -----
       var noSleep = new NoSleep();
       noSleep.enable(); // keep the screen on!
 
       var wakeLockEnabled = true;
-      var toggleEl = document.querySelector("#toggle");
+      var toggleEl = document.querySelector("#toggle_NoSleep");
       toggleEl.addEventListener('click', function() {
         if (!wakeLockEnabled) {
           noSleep.enable(); // keep the screen on!

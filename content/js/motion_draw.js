@@ -20,6 +20,8 @@ window.onload = function()
   motion_draw_viewer.begin_drawing(20);
   motion_draw_viewer.init_navigator();
 
+  motion_draw_viewer.line_visible = true;
+
   motion_draw_viewer.control.x        = document.getElementById('c_x');
   motion_draw_viewer.control.y        = document.getElementById('c_y');
   motion_draw_viewer.control.acc      = document.getElementById('c_acc');
@@ -27,8 +29,10 @@ window.onload = function()
   motion_draw_viewer.control.zoom_out = document.getElementById('c_zoom_out');
   motion_draw_viewer.control.color    = document.getElementById('c_color');
 
-  motion_draw_viewer.control.toggle_menu    = document.getElementById('c_toggle_menu');
-  motion_draw_viewer.control.menuBox = document.getElementById('c_menu');
+  motion_draw_viewer.control.toggle_draw = document.getElementById("toggle_drawing");
+
+  motion_draw_viewer.control.toggle_menu = document.getElementById('c_toggle_menu');
+  motion_draw_viewer.control.menuBox     = document.getElementById('c_menu');
 
   // hide menu on load
   motion_draw_viewer.control.menuBox.style.display = "none";
@@ -56,6 +60,22 @@ window.onload = function()
   {
     motion_draw_viewer.canvas_zoom += 0.2;
   };
+
+  // this button decides if the motion vector will be drawn
+  motion_draw_viewer.control.toggle_draw.onclick = function()
+  {
+    if(motion_draw_viewer.line_visible)
+    {
+      motion_draw_viewer.line_visible = false;
+      motion_draw_viewer.control.toggle_draw.value = "start drawing";
+    }
+    else
+    {
+      motion_draw_viewer.line_visible = true;
+      motion_draw_viewer.control.toggle_draw.value = "stop drawing";
+    }
+  };
+
 };
 
 window.onresize = function()
@@ -542,8 +562,8 @@ Viewer.prototype.send_pos = function(pos)
 
   var mot_vector  = new Vec3(diff_lng,diff_lat,0);
   var mot_color   = this.hex_to_rgb(this.control.color.value);
-  var mot_visible = true;
-  var motion      = new Motion(mot_vector,mot_color,mot_visible);
+
+  var motion      = new Motion(mot_vector,mot_color,motion_draw_viewer.line_visible);
 
   var request     = {'request_type':REQUEST_ADD_MOTION,'motion':motion};
 
