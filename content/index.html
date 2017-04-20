@@ -48,18 +48,19 @@ void main()
 
 </script>
 
+<body>
 
   <div id="body">
 
     <canvas id="viewer_canvas"></canvas>
 
     <div id = "control">
-      
+
       <form id = "c_menu" style="display: block">
         x:    <input id = "c_x"    type = "text" readonly style="width: 30px;">
         y:    <input id = "c_y"    type = "text" readonly style="width: 30px;">
         acc:  <input id = "c_acc"  type = "text" readonly style="width: 30px;"><br />
-        
+
         <input  id = "c_color"    type="color">
 
         <button id = "c_zoom_in"  type="button">zoom in</button>
@@ -67,7 +68,7 @@ void main()
         <button id = "c_zoom_out" type="button">zoom out</button>
         <input type="button" id="toggle" value="enable sleep" />
       </form>
-      
+
       <button id = "c_toggle_menu" type="button">...</button>
 
     </div>

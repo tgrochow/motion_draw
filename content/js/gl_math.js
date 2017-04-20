@@ -119,4 +119,16 @@ var mat4 = new function()
 
     return product_mat;
   };
+
+  this.transform = function(v,m)
+  {
+    var vm = new Float32Array(4);
+
+    vm[0] = v.x * m[0]  + v.y  * m[1]  +  v.z  * m[2]  + 1  * m[3];
+    vm[1] = v.x * m[4]  + v.y  * m[5]  +  v.z  * m[6]  + 1  * m[7];
+    vm[2] = v.x * m[8]  + v.y  * m[9]  +  v.z  * m[10] + 1  * m[11];
+    vm[3] = v.x * m[12] + v.y * m[13]  +  v.z  * m[14] + 1  * m[15];
+
+    return vm;
+  };
 };

@@ -138,7 +138,7 @@ function new_polyline()
 
   var polyline = new google.maps.Polyline(
   {
-    strokeColor:   '#000000',
+    strokeColor:   debug_client.control.color.value,
     strokeOpacity: 1.0,
     strokeWeight:  3
   });

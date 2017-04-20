@@ -1,3 +1,8 @@
+//    Moion Draw Viewer
+//    Tony Grochow
+//    Jonathan F. Siefert
+//    MIT license
+
 const REQUEST_GET_ID           = 0;
 const REQUEST_GET_CLIENT_LIST  = 1;
 const REQUEST_ADD_MOTION       = 2;
@@ -11,12 +16,12 @@ window.onload = function()
   motion_draw_viewer.init_websocket(host,'9080','motion_draw');
   motion_draw_viewer.init_gl_ctx('viewer_canvas');
   motion_draw_viewer.load_gl_program('viewer_vertex','viewer_fragment');
+  motion_draw_viewer.load_gl_program('marker_vertex','marker_fragment');
   motion_draw_viewer.prepare_gl_buffer();
   motion_draw_viewer.begin_drawing(20);
 
   motion_draw_viewer.control.zoom_in  = document.getElementById('c_zoom_in');
   motion_draw_viewer.control.zoom_out = document.getElementById('c_zoom_out');
-  motion_draw_viewer.control.color    = document.getElementById('c_color');
 
   motion_draw_viewer.control.zoom_in.onclick = function()
   {
@@ -83,7 +88,7 @@ function Client(client_id)
   this.polyline_list = [];
   this.color_list    = [];
   this.current_index = -1;
-  this.current_pos   = -1;
+  this.current_pos   = null;
 }
 
 Client.prototype.add_motion = function(m_vector,m_color,m_visible)
@@ -108,7 +113,7 @@ Client.prototype.generate_polyline_list = function(origin)
   }
 
   this.polyline_list = this.polyline_list.concat(line_list[0]);
-  this.color_list = this.color_list.concat(line_list[1]);
+  this.color_list    = this.color_list.concat(line_list[1]);
 
   return [this.polyline_list,this.color_list];
 };
@@ -154,11 +159,12 @@ function Viewer()
   this.port           = '';
   this.protocol       = '';
 
+  this.client_id      = null;
   this.client_list    = [];
 
   this.canvas         = null;
   this.gl_ctx         = null;
-  this.gl_program     = null;
+  this.gl_program     = [];
   this.gl_buffer      = {};
   this.attr_loc       = {};
 
@@ -172,6 +178,10 @@ function Viewer()
   this.vec_scale      = 100000;
 
   this.control        = {};
+  this.mouse_down     = false;
+  this.prev_touch_pos = null;
+  this.prev_second_touch_pos = null;
+  this.to_many_touches = false;
 }
 
 Viewer.prototype.init_websocket = function(host,port,protocol)
@@ -245,37 +255,52 @@ Viewer.prototype.init_gl_ctx = function(canvas_id)
 
   try
   {
-     this.gl_ctx = this.canvas.getContext('experimental-webgl');
+    this.canvas = document.getElementById(canvas_id);
 
-     this.canvas.width  = window.innerWidth;
-     this.canvas.height = window.innerHeight;
+    try
+    {
+       this.gl_ctx = this.canvas.getContext('experimental-webgl');
 
-     this.gl_ctx.viewport(0,0,this.canvas.width,this.canvas.height);
+       this.canvas.width  = window.innerWidth;
+       this.canvas.height = window.innerHeight;
 
-     this.canvas.onmousedown = function(event)
-     {
-       motion_draw_viewer.prev_mouse_pos = [event.clientX,event.clientY];
-       motion_draw_viewer.mouse_down = true;
-     };
+       this.gl_ctx.viewport(0,0,this.canvas.width,this.canvas.height);
 
-     this.canvas.onmouseup = function(event)
-     {
-       motion_draw_viewer.mouse_down = false;
-     };
-
-     this.canvas.onmousemove = function(event)
-     {
-       if(motion_draw_viewer.mouse_down)
+       this.canvas.onmousedown = function(event)
        {
-         var x = (event.clientX - motion_draw_viewer.prev_mouse_pos[0]) * motion_draw_viewer.canvas_zoom;
-         var y = (motion_draw_viewer.prev_mouse_pos[1] - event.clientY) * motion_draw_viewer.canvas_zoom;
-         var t_mat = mat4.translation_matrix(x,y,0.0);
-
-         motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
-
          motion_draw_viewer.prev_mouse_pos = [event.clientX,event.clientY];
-       }
-     };
+         motion_draw_viewer.mouse_down = true;
+       };
+
+       this.canvas.onmouseup = function(event)
+       {
+         motion_draw_viewer.mouse_down = false;
+       };
+
+       this.canvas.onmousemove = function(event)
+       {
+         if(motion_draw_viewer.mouse_down)
+         {
+           var x = (event.clientX - motion_draw_viewer.prev_mouse_pos[0]) * motion_draw_viewer.canvas_zoom;
+           var y = (motion_draw_viewer.prev_mouse_pos[1] - event.clientY) * motion_draw_viewer.canvas_zoom;
+           var t_mat = mat4.translation_matrix(x,y,0.0);
+
+           motion_draw_viewer.view_matrix = mat4.mat_mult(motion_draw_viewer.view_matrix,t_mat);
+
+           motion_draw_viewer.prev_mouse_pos = [event.clientX,event.clientY];
+         }
+       };
+    }
+
+    catch(exception)
+    {
+       console.log('webGL: ' + exception.message);
+    }
+
+    if(!this.gl_ctx)
+    {
+       console.log('webGL: context initialization failed');
+    }
   }
 
   catch(exception)
@@ -341,42 +366,37 @@ Viewer.prototype.load_gl_program = function(vs_id,fs_id)
   var vertex_shader   = this.load_gl_shader(vs_id);
   var fragment_shader = this.load_gl_shader(fs_id);
 
-  this.gl_program = this.gl_ctx.createProgram();
+  var program = this.gl_ctx.createProgram();
 
-  this.gl_ctx.attachShader(this.gl_program,vertex_shader);
-  this.gl_ctx.attachShader(this.gl_program,fragment_shader);
-  this.gl_ctx.linkProgram(this.gl_program);
+  this.gl_ctx.attachShader(program,vertex_shader);
+  this.gl_ctx.attachShader(program,fragment_shader);
+  this.gl_ctx.linkProgram(program);
 
 
-  if(!this.gl_ctx.getProgramParameter(this.gl_program,this.gl_ctx.LINK_STATUS))
+  if(!this.gl_ctx.getProgramParameter(program,this.gl_ctx.LINK_STATUS))
   {
      console.log("webGL: program linking failed");
   }
 
   else
   {
-    this.gl_ctx.useProgram(this.gl_program);
+    this.gl_program.push(program);
   }
 };
 
 Viewer.prototype.prepare_gl_buffer = function()
 {
-  this.gl_buffer.position = this.gl_ctx.createBuffer();
-  this.gl_buffer.color    = this.gl_ctx.createBuffer();
-  this.attr_loc.position  = this.get_attrib_loc('pos');
-  this.attr_loc.color     = this.get_attrib_loc('color');
-
-  //this.gl_ctx.enableVertexAttribArray(this.attr_loc.position);
-  //this.gl_ctx.enableVertexAttribArray(this.attr_loc.color);
-
-  //this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer.position);
-  //this.gl_ctx.enableVertexAttribArray(attrib_loc);
-  //this.gl_ctx.vertexAttribPointer(attrib_loc,3,this.gl_ctx.FLOAT,false,0,0);
+  this.gl_buffer.position   = this.gl_ctx.createBuffer();
+  this.gl_buffer.color      = this.gl_ctx.createBuffer();
+  this.gl_buffer.marker_pos = this.gl_ctx.createBuffer();
+  this.attr_loc.position    = this.get_attrib_loc(0,'pos');
+  this.attr_loc.color       = this.get_attrib_loc(0,'color');
+  this.attr_loc.marker_pos  = this.get_attrib_loc(1,'pos');
 };
 
-Viewer.prototype.get_attrib_loc = function(attribute_name)
+Viewer.prototype.get_attrib_loc = function(p_index,attribute_name)
 {
-  var attrib_loc = this.gl_ctx.getAttribLocation(this.gl_program,attribute_name);
+  var attrib_loc = this.gl_ctx.getAttribLocation(this.gl_program[p_index],attribute_name);
 
   if(attrib_loc === -1)
   {
@@ -412,6 +432,7 @@ Viewer.prototype.draw = function()
   var position_buffer = new Float32Array(polyline_list);
   var color_buffer    = new Uint8Array(color_list);
 
+  this.gl_ctx.useProgram(this.gl_program[0]);
   this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer.position);
   this.gl_ctx.enableVertexAttribArray(this.attr_loc.position);
 
@@ -440,7 +461,7 @@ Viewer.prototype.draw = function()
   var p_mat = mat4.orthogonal_matrix(-width,width,-height,height,0,1);
   var pv    = mat4.mat_mult(p_mat,this.view_matrix);
 
-  var location = this.gl_ctx.getUniformLocation(this.gl_program,'pv');
+  var location = this.gl_ctx.getUniformLocation(this.gl_program[0],'pv');
 
   this.gl_ctx.uniformMatrix4fv(location,false,mat4.transpose(pv));
 
@@ -449,21 +470,87 @@ Viewer.prototype.draw = function()
   this.gl_ctx.clear(this.gl_ctx.COLOR_BUFFER_BIT);
 
   this.gl_ctx.drawArrays(this.gl_ctx.LINES,0,polyline_list.length / 3);
+
+  this.draw_position_marker(pv);
 }
 
-Viewer.prototype.round_dec = function(dec_number,dec_place)
+// draw the user position on the canvas with an hint to the direction
+Viewer.prototype.draw_position_marker = function(pv)
 {
-  if(dec_place > 0)
+  // client id wasn't requested already
+  if(this.client_id === null)
   {
-    d = Math.pow(10,dec_place);
+    // send id request to the server
+    var request = {'request_type':REQUEST_GET_ID};
 
-    dec_number *= d;
-    dec_number  = Math.round(dec_number);
-    dec_number /= d;
+    this.websocket.send(JSON.stringify(request));
+
+    return;
   }
 
-  return dec_number;
-}
+  // get user client index
+  //var client_index = this.client_index(this.client_id);
+  var client = this.client_list[0];
+
+  // no motion data available
+  /*if(client_index === -1)
+  {
+    return;
+  }*/
+
+  // get user client
+  //var client = this.client_list[client_index];
+
+  if(client.current_pos === null)
+  {
+    return;
+  }
+
+  var pos = mat4.transform(client.current_pos,pv);
+  var ratio = this.canvas.width / this.canvas.height;
+
+  console.log(ratio);
+
+  //pos[0] *= ratio;
+
+  pos[0] /= pos[3];
+  pos[1] /= pos[3];
+
+  var dir = client.motion_array[client.motion_array.length - 1].vector;
+  var length = Math.sqrt(Math.pow(dir.x,2) + Math.pow(dir.y,2));
+
+  dir.x /= length;
+  dir.y /= length;
+
+  var orth_dir = new Vec3(-dir.y,dir.x,0.0);
+  orth_dir.x = orth_dir.x / ratio;
+
+  var m_pos = new Float32Array(9);
+
+  m_pos[0] = pos[0] + orth_dir.x * 0.015;
+  m_pos[1] = pos[1] + orth_dir.y * 0.015;
+  m_pos[2] = 0.0;
+
+  m_pos[3] = pos[0] - orth_dir.x * 0.015;
+  m_pos[4] = pos[1] - orth_dir.y * 0.015;
+  m_pos[5] = 0.0;
+
+  m_pos[6] = pos[0] + dir.x * 0.03;
+  m_pos[7] = pos[1] + dir.y * 0.03;
+  m_pos[8] = 0.0;
+
+  this.gl_ctx.useProgram(this.gl_program[1]);
+  this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer.marker_pos);
+  this.gl_ctx.enableVertexAttribArray(this.attr_loc.marker_pos);
+
+  this.gl_ctx.bufferData(this.gl_ctx.ARRAY_BUFFER,
+                         m_pos,
+                         this.gl_ctx.DYNAMIC_DRAW  );
+
+  this.gl_ctx.vertexAttribPointer(this.attr_loc.marker_pos,3,this.gl_ctx.FLOAT,false,0,0);
+
+  this.gl_ctx.drawArrays(this.gl_ctx.TRIANGLES,0,3);
+};
 
 Viewer.prototype.hex_to_rgb = function(hex_color_string)
 {
@@ -483,6 +570,20 @@ Viewer.prototype.hex_to_rgb = function(hex_color_string)
 
   return rgb;
 };
+
+Viewer.prototype.round_dec = function(dec_number,dec_place)
+{
+  if(dec_place > 0)
+  {
+    d = Math.pow(10,dec_place);
+
+    dec_number *= d;
+    dec_number  = Math.round(dec_number);
+    dec_number /= d;
+  }
+
+  return dec_number;
+}
 
 Viewer.prototype.send_pos = function(pos)
 {
@@ -516,7 +617,7 @@ Viewer.prototype.send_pos = function(pos)
   this.control.y.value = diff_lat;
 
   var mot_vector  = new Vec3(diff_lng,diff_lat,0);
-  var mot_color   = new Vec3(0.0,0.0,0.0);
+  var mot_color   = this.hex_to_rgb(this.control.color.value);
   var mot_visible = true;
   var motion      = new Motion(mot_vector,mot_color,mot_visible);
 
@@ -559,6 +660,7 @@ function websocket_onmessage(message)
       case REQUEST_GET_ID:
 
         console.log('websocket: client_id = ' + request.client_id);
+        motion_draw_viewer.client_id = request.client_id;
         break;
 
       case REQUEST_GET_CLIENT_LIST:
@@ -591,4 +693,20 @@ function websocket_onmessage(message)
 function draw_motion_viewer()
 {
   motion_draw_viewer.draw();
+}
+
+function nav_watch_pos(pos)
+{
+  motion_draw_viewer.send_pos(pos);
+}
+
+function nav_error(err)
+{
+  switch(err.code)
+  {
+    case err.PERMISSION_DENIED:    break;
+    case err.POSITION_UNAVAILABLE: break;
+    case err.TIMEOUT:              break;
+    case err.UNKNOWN_ERROR:        break;
+  }
 }

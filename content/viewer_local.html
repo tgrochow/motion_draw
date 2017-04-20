@@ -46,6 +46,27 @@ void main()
 
 </script>
 
+<script id="marker_vertex" type="x-shader/x-vertex">
+
+attribute vec3 pos;
+
+void main()
+{
+  gl_Position = vec4(pos,1.0);
+}
+
+</script>
+
+<script id="marker_fragment" type="x-shader/x-fragment">
+
+void main()
+{
+  gl_FragColor = vec4(1.0);
+}
+
+</script>
+
+
 </head>
 
 
@@ -60,7 +81,6 @@ void main()
   <form>
     <button id = "c_zoom_in"  type="button">zoom in</button>
     <button id = "c_zoom_out" type="button">zoom out</button>
-    <input  id = "c_color"    type="color">
   </form>
 
 </div>
