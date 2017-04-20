@@ -555,16 +555,16 @@ Viewer.prototype.draw_position_marker = function(pv)
 
   var m_pos = new Float32Array(9);
 
-  m_pos[0] = pos[0] + orth_dir.x * 0.015;
-  m_pos[1] = pos[1] + orth_dir.y * 0.015;
+  m_pos[0] = pos[0] + orth_dir.x * 0.025;
+  m_pos[1] = pos[1] + orth_dir.y * 0.025;
   m_pos[2] = 0.0;
 
-  m_pos[3] = pos[0] - orth_dir.x * 0.015;
-  m_pos[4] = pos[1] - orth_dir.y * 0.015;
+  m_pos[3] = pos[0] - orth_dir.x * 0.025;
+  m_pos[4] = pos[1] - orth_dir.y * 0.025;
   m_pos[5] = 0.0;
 
-  m_pos[6] = pos[0] + dir.x * 0.03;
-  m_pos[7] = pos[1] + dir.y * 0.03;
+  m_pos[6] = pos[0] + dir.x * 0.05;
+  m_pos[7] = pos[1] + dir.y * 0.05;
   m_pos[8] = 0.0;
 
   this.gl_ctx.useProgram(this.gl_program[1]);

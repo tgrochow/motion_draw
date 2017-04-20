@@ -10,9 +10,9 @@
 <meta charset = "utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
 
-<link rel = "stylesheet" type = "text/css" href = "css/viewer.css">
+<link rel = "stylesheet" type = "text/css" href = "css/motion_viewer.css">
 
-<script>var host = 'wss://79.207.124.205';</script>
+<script>var host = 'wss://motion-draw.sytes.net';</script>
 <script language = "javascript" type = "text/javascript" src = "js/gl_math.js"></script>
 <script language = "javascript" type = "text/javascript" src = "js/viewer.js"></script>
 
@@ -46,12 +46,46 @@ void main()
 
 </script>
 
+<script id="marker_vertex" type="x-shader/x-vertex">
+
+attribute vec3 pos;
+
+void main()
+{
+  gl_Position = vec4(pos,1.0);
+}
+
+</script>
+
+<script id="marker_fragment" type="x-shader/x-fragment">
+
+void main()
+{
+  gl_FragColor = vec4(1.0);
+}
+
+</script>
+
+
 </head>
 
 
 <body>
 
-<canvas id="viewer_canvas" width="500px" height="500px"></canvas>
+<div id="body">
+
+<canvas id="viewer_canvas"></canvas>
+
+<div id = "control">
+
+  <form>
+    <button id = "c_zoom_in"  type="button">zoom in</button>
+    <button id = "c_zoom_out" type="button">zoom out</button>
+  </form>
+
+</div>
+
+</div>
 
 </body>
 
