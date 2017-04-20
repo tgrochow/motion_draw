@@ -518,17 +518,16 @@ Viewer.prototype.draw_position_marker = function(pv)
   }
 
   // get user client index
-  //var client_index = this.client_index(this.client_id);
-  var client = this.client_list[0];
+  var client_index = this.client_index(this.client_id);
 
   // no motion data available
-  /*if(client_index === -1)
+  if(client_index === -1)
   {
     return;
-  }*/
+  }
 
   // get user client
-  //var client = this.client_list[client_index];
+  var client = this.client_list[client_index];
 
   if(client.current_pos === null)
   {
