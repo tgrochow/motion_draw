@@ -16,6 +16,7 @@ window.onload = function()
   motion_draw_viewer.init_websocket(host,'9080','motion_draw');
   motion_draw_viewer.init_gl_ctx('viewer_canvas');
   motion_draw_viewer.load_gl_program('viewer_vertex','viewer_fragment');
+  motion_draw_viewer.load_gl_program('marker_vertex','marker_fragment');
   motion_draw_viewer.prepare_gl_buffer();
   motion_draw_viewer.begin_drawing(20);
   motion_draw_viewer.init_navigator();
@@ -37,16 +38,16 @@ window.onload = function()
   // hide menu on load
   motion_draw_viewer.control.menuBox.style.display = "none";
   // show/hide the menu when toggleMenu is pressed
-  motion_draw_viewer.control.toggle_menu.onclick = function toggleMenu() 
+  motion_draw_viewer.control.toggle_menu.onclick = function toggleMenu()
   {
     // if is menuBox displayed, hide it
-    if(motion_draw_viewer.control.menuBox.style.display == "block") 
-    { 
+    if(motion_draw_viewer.control.menuBox.style.display == "block")
+    {
       motion_draw_viewer.control.menuBox.style.display = "none";
     }
     // if is menuBox hidden, display it
-    else 
-    { 
+    else
+    {
       motion_draw_viewer.control.menuBox.style.display = "block";
     }
   };
@@ -203,11 +204,12 @@ function Viewer()
   this.port           = '';
   this.protocol       = '';
 
+  this.client_id      = null;
   this.client_list    = [];
 
   this.canvas         = null;
   this.gl_ctx         = null;
-  this.gl_program     = null;
+  this.gl_program     = [];
   this.gl_buffer      = {};
   this.attr_loc       = {};
 
@@ -393,35 +395,37 @@ Viewer.prototype.load_gl_program = function(vs_id,fs_id)
   var vertex_shader   = this.load_gl_shader(vs_id);
   var fragment_shader = this.load_gl_shader(fs_id);
 
-  this.gl_program = this.gl_ctx.createProgram();
+  var program = this.gl_ctx.createProgram();
 
-  this.gl_ctx.attachShader(this.gl_program,vertex_shader);
-  this.gl_ctx.attachShader(this.gl_program,fragment_shader);
-  this.gl_ctx.linkProgram(this.gl_program);
+  this.gl_ctx.attachShader(program,vertex_shader);
+  this.gl_ctx.attachShader(program,fragment_shader);
+  this.gl_ctx.linkProgram(program);
 
 
-  if(!this.gl_ctx.getProgramParameter(this.gl_program,this.gl_ctx.LINK_STATUS))
+  if(!this.gl_ctx.getProgramParameter(program,this.gl_ctx.LINK_STATUS))
   {
      console.log("webGL: program linking failed");
   }
 
   else
   {
-    this.gl_ctx.useProgram(this.gl_program);
+    this.gl_program.push(program);
   }
 };
 
 Viewer.prototype.prepare_gl_buffer = function()
 {
-  this.gl_buffer.position = this.gl_ctx.createBuffer();
-  this.gl_buffer.color    = this.gl_ctx.createBuffer();
-  this.attr_loc.position  = this.get_attrib_loc('pos');
-  this.attr_loc.color     = this.get_attrib_loc('color');
+  this.gl_buffer.position   = this.gl_ctx.createBuffer();
+  this.gl_buffer.color      = this.gl_ctx.createBuffer();
+  this.gl_buffer.marker_pos = this.gl_ctx.createBuffer();
+  this.attr_loc.position    = this.get_attrib_loc(0,'pos');
+  this.attr_loc.color       = this.get_attrib_loc(0,'color');
+  this.attr_loc.marker_pos  = this.get_attrib_loc(1,'pos');
 };
 
-Viewer.prototype.get_attrib_loc = function(attribute_name)
+Viewer.prototype.get_attrib_loc = function(p_index,attribute_name)
 {
-  var attrib_loc = this.gl_ctx.getAttribLocation(this.gl_program,attribute_name);
+  var attrib_loc = this.gl_ctx.getAttribLocation(this.gl_program[p_index],attribute_name);
 
   if(attrib_loc === -1)
   {
@@ -457,6 +461,7 @@ Viewer.prototype.draw = function()
   var position_buffer = new Float32Array(polyline_list);
   var color_buffer    = new Uint8Array(color_list);
 
+  this.gl_ctx.useProgram(this.gl_program[0]);
   this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer.position);
   this.gl_ctx.enableVertexAttribArray(this.attr_loc.position);
 
@@ -485,7 +490,7 @@ Viewer.prototype.draw = function()
   var p_mat = mat4.orthogonal_matrix(-width,width,-height,height,0,1);
   var pv    = mat4.mat_mult(p_mat,this.view_matrix);
 
-  var location = this.gl_ctx.getUniformLocation(this.gl_program,'pv');
+  var location = this.gl_ctx.getUniformLocation(this.gl_program[0],'pv');
 
   this.gl_ctx.uniformMatrix4fv(location,false,mat4.transpose(pv));
 
@@ -494,7 +499,87 @@ Viewer.prototype.draw = function()
   this.gl_ctx.clear(this.gl_ctx.COLOR_BUFFER_BIT);
 
   this.gl_ctx.drawArrays(this.gl_ctx.LINES,0,polyline_list.length / 3);
-}
+
+  this.draw_position_marker(pv);
+};
+
+// draw the user position on the canvas with an hint to the direction
+Viewer.prototype.draw_position_marker = function(pv)
+{
+  // client id wasn't requested already
+  if(this.client_id === null)
+  {
+    // send id request to the server
+    var request = {'request_type':REQUEST_GET_ID};
+
+    this.websocket.send(JSON.stringify(request));
+
+    return;
+  }
+
+  // get user client index
+  //var client_index = this.client_index(this.client_id);
+  var client = this.client_list[0];
+
+  // no motion data available
+  /*if(client_index === -1)
+  {
+    return;
+  }*/
+
+  // get user client
+  //var client = this.client_list[client_index];
+
+  if(client.current_pos === null)
+  {
+    return;
+  }
+
+  var pos = mat4.transform(client.current_pos,pv);
+  var ratio = this.canvas.width / this.canvas.height;
+
+  console.log(ratio);
+
+  //pos[0] *= ratio;
+
+  pos[0] /= pos[3];
+  pos[1] /= pos[3];
+
+  var dir = client.motion_array[client.motion_array.length - 1].vector;
+  var length = Math.sqrt(Math.pow(dir.x,2) + Math.pow(dir.y,2));
+
+  dir.x /= length;
+  dir.y /= length;
+
+  var orth_dir = new Vec3(-dir.y,dir.x,0.0);
+  orth_dir.x = orth_dir.x / ratio;
+
+  var m_pos = new Float32Array(9);
+
+  m_pos[0] = pos[0] + orth_dir.x * 0.015;
+  m_pos[1] = pos[1] + orth_dir.y * 0.015;
+  m_pos[2] = 0.0;
+
+  m_pos[3] = pos[0] - orth_dir.x * 0.015;
+  m_pos[4] = pos[1] - orth_dir.y * 0.015;
+  m_pos[5] = 0.0;
+
+  m_pos[6] = pos[0] + dir.x * 0.03;
+  m_pos[7] = pos[1] + dir.y * 0.03;
+  m_pos[8] = 0.0;
+
+  this.gl_ctx.useProgram(this.gl_program[1]);
+  this.gl_ctx.bindBuffer(this.gl_ctx.ARRAY_BUFFER,this.gl_buffer.marker_pos);
+  this.gl_ctx.enableVertexAttribArray(this.attr_loc.marker_pos);
+
+  this.gl_ctx.bufferData(this.gl_ctx.ARRAY_BUFFER,
+                         m_pos,
+                         this.gl_ctx.DYNAMIC_DRAW  );
+
+  this.gl_ctx.vertexAttribPointer(this.attr_loc.marker_pos,3,this.gl_ctx.FLOAT,false,0,0);
+
+  this.gl_ctx.drawArrays(this.gl_ctx.TRIANGLES,0,3);
+};
 
 Viewer.prototype.hex_to_rgb = function(hex_color_string)
 {
@@ -604,6 +689,7 @@ function websocket_onmessage(message)
       case REQUEST_GET_ID:
 
         console.log('websocket: client_id = ' + request.client_id);
+        motion_draw_viewer.client_id = request.client_id;
         break;
 
       case REQUEST_GET_CLIENT_LIST:
