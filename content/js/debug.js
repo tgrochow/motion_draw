@@ -7,7 +7,6 @@ var debug_client = null;
 function Debug_motion(m_vector,m_color,m_visible)
 {
   this.vector   = m_vector;
-  this.vector.z = 0.0;
   this.color    = m_color;
   this.visible  = m_visible;
 }
@@ -85,7 +84,7 @@ Debug_client.prototype.calc_motion_vector = function(pos,prev_pos)
   diff_lat      = this.round_dec(diff_lat,this.vec_dec_plc);
   diff_lng      = this.round_dec(diff_lng,this.vec_dec_plc);
 
-  return {'x' : diff_lng,'y' : diff_lat};
+  return [diff_lng,diff_lat];
 };
 
 Debug_client.prototype.round_dec = function(dec_number,dec_place)
@@ -207,8 +206,8 @@ function map_click_handler(mouse_event)
 
   debug_client.send_motion(motion);
 
-  debug_client.control.x.value = m_vec.x;
-  debug_client.control.y.value = m_vec.y;
+  debug_client.control.x.value = m_vec[0];
+  debug_client.control.y.value = m_vec[1];
 
   path.push(mouse_event.latLng);
 }

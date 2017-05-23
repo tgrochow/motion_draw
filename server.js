@@ -108,9 +108,6 @@ Server.prototype.init_websocket_server = function()
 function process_request(request)
 {
   var connection       = request.accept(server.protocol,request.origin);
-
-  console.log(request.origin);
-
   connection.client_id = request.httpRequest.headers['sec-websocket-key'];
 
   connection.on('message',process_message);

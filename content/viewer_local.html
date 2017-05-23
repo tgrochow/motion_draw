@@ -8,84 +8,18 @@
 <title>motion draw viewer</title>
 
 <meta charset = "utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no">
+<meta name = "viewport" content = "width=device-width,initial-scale=1.0,user-scalable=no">
 
-<link rel = "stylesheet" type = "text/css" href = "css/motion_viewer.css">
+<link rel = "stylesheet" type = "text/css" href = "css/viewer.css">
 
 <script>var host = 'wss://localhost';</script>
 <script language = "javascript" type = "text/javascript" src = "js/gl_math.js"></script>
+<script language = "javascript" type = "text/javascript" src = "js/canvas.js"></script>
 <script language = "javascript" type = "text/javascript" src = "js/viewer.js"></script>
-
-<script id="viewer_vertex" type="x-shader/x-vertex">
-
-attribute vec3 pos;
-attribute vec3 color;
-
-varying vec3 frag_color;
-
-uniform mat4 pv;
-
-void main()
-{
-  frag_color  = color;
-  gl_Position = pv * vec4(pos,1.0);
-}
-
-</script>
-
-<script id="viewer_fragment" type="x-shader/x-fragment">
-
-precision mediump float;
-
-varying vec3 frag_color;
-
-void main()
-{
-  gl_FragColor = vec4(frag_color,1.0);
-}
-
-</script>
-
-<script id="marker_vertex" type="x-shader/x-vertex">
-
-attribute vec3 pos;
-
-void main()
-{
-  gl_Position = vec4(pos,1.0);
-}
-
-</script>
-
-<script id="marker_fragment" type="x-shader/x-fragment">
-
-void main()
-{
-  gl_FragColor = vec4(1.0);
-}
-
-</script>
-
-
-</head>
-
 
 <body>
 
-<div id="body">
-
-<canvas id="viewer_canvas"></canvas>
-
-<div id = "control">
-
-  <form>
-    <button id = "c_zoom_in"  type="button">zoom in</button>
-    <button id = "c_zoom_out" type="button">zoom out</button>
-  </form>
-
-</div>
-
-</div>
+<canvas id = "viewer_canvas" width = "500" height = "500"></canvas>
 
 </body>
 

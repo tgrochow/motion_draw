@@ -13,73 +13,21 @@
 <link rel = "stylesheet" type = "text/css" href = "css/motion_viewer.css">
 
 <script>var host = 'wss://motion-draw.sytes.net';</script>
-<script>var host_l = 'wss://localhost';</script>
 <script language = "javascript" type = "text/javascript" src = "js/gl_math.js"></script>
-<script language = "javascript" type = "text/javascript" src = "js/motion_draw.js"></script>
+<script language = "javascript" type = "text/javascript" src = "js/canvas.js"></script>
+<script language = "javascript" type = "text/javascript" src = "js/motion_viewer.js"></script>
 <script language = "javascript" type = "text/javascript" src = "js/NoSleep.js"></script>
-
-
-<script id="viewer_vertex" type="x-shader/x-vertex">
-
-attribute vec3 pos;
-attribute vec3 color;
-
-varying vec3 frag_color;
-
-uniform mat4 pv;
-
-void main()
-{
-  frag_color  = color;
-  gl_Position = pv * vec4(pos,1.0);
-}
-
-</script>
-
-<script id="viewer_fragment" type="x-shader/x-fragment">
-
-precision mediump float;
-
-varying vec3 frag_color;
-
-void main()
-{
-  gl_FragColor = vec4(frag_color,1.0);
-}
-
-</script>
-
-<script id="marker_vertex" type="x-shader/x-vertex">
-
-attribute vec3 pos;
-
-void main()
-{
-  gl_Position = vec4(pos,1.0);
-}
-
-</script>
-
-<script id="marker_fragment" type="x-shader/x-fragment">
-
-void main()
-{
-  gl_FragColor = vec4(1.0);
-}
-
-</script>
 
 <body>
 
   <div id="body">
 
-    <canvas id="viewer_canvas"></canvas>
+    <canvas id = "viewer_canvas" width = "500" height = "500"></canvas>
 
     <div id = "control">
 
       <form id = "c_menu" style="display: block">
         <font color= #ffffff>accuracy:</font>  <input id = "c_acc"  type = "text" readonly style="width: 30px;"><br />
-
         <input  id = "c_color"    type="color">
         <input type="button" id="toggle_drawing" value="stop drawing" />
         <input type="button" id="toggle_NoSleep" value="enable sleep" />
@@ -96,19 +44,23 @@ void main()
 
       var wakeLockEnabled = true;
       var toggleEl = document.querySelector("#toggle_NoSleep");
-      toggleEl.addEventListener('click', function() {
-        if (!wakeLockEnabled) {
+      toggleEl.addEventListener('click', function()
+      {
+        if (!wakeLockEnabled)
+        {
           noSleep.enable(); // keep the screen on!
           wakeLockEnabled = true;
           toggleEl.value = "enable sleep";
-        } else {
+        }
+
+        else
+        {
           noSleep.disable(); // let the screen turn off.
           wakeLockEnabled = false;
           toggleEl.value = "disable sleep";
         }
-      }, false);
+      },false);
     </script>
-
 
   </div>
 
